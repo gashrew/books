@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Books">
+<title>Books</title>
+<style>
+  :root {
+    --ink:#1a1410;--ink-light:#5c4f3d;--ink-faint:#9c8c7a;--page:#faf8f4;--page-warm:#f3efe8;
+    --page-border:#e0d8cc;--accent:#7b3f1e;--accent-light:#c4622d;--accent-faint:#f5ece6;
+    --gold:#b8963e;--gold-light:#f0e4c2;--green:#2d6a4f;--green-light:#e8f5ee;
+    --blue:#1e4d7b;--blue-light:#e6eef7;--radius:10px;
+    --font-serif:'Georgia','Times New Roman',serif;--font-sans:-apple-system,'Helvetica Neue',Arial,sans-serif;
+    --safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px);
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --ink:#f0ebe3;--ink-light:#c8b99e;--ink-faint:#7a6d5e;--page:#1c1710;--page-warm:#241e15;
+    --page-border:#3a3025;--accent:#d4875a;--accent-light:#e8a070;--accent-faint:#2e1e12;
+    --gold:#d4a84b;--gold-light:#2a2010;--green:#52b788;--green-light:#0f2b1e;
+    --blue:#6aabda;--blue-light:#0f1e2e;
+  }}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;overflow:hidden;font-family:var(--font-sans);background:var(--page);color:var(--ink)}
+  #app{display:flex;flex-direction:column;height:100%;height:-webkit-fill-available}
+  #header{background:var(--page);border-bottom:1px solid var(--page-border);padding:calc(var(--safe-top) + 10px) 16px 10px;flex-shrink:0;z-index:10}
+  #header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  #app-title{font-family:var(--font-serif);font-size:26px;font-weight:normal;color:var(--accent);letter-spacing:.02em;display:flex;align-items:center;gap:8px}
+  #header-actions{display:flex;gap:8px}
+  .icon-btn{background:none;border:none;cursor:pointer;color:var(--ink-light);padding:6px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:20px;transition:background .15s,color .15s}
+  .icon-btn:active{background:var(--page-warm);color:var(--accent)}
+  #search-bar{display:flex;gap:8px;align-items:center;background:var(--page-warm);border:1px solid var(--page-border);border-radius:10px;padding:8px 12px}
+  #search-bar svg{color:var(--ink-faint);flex-shrink:0}
+  #search-input{flex:1;background:none;border:none;outline:none;font-size:16px;color:var(--ink);font-family:var(--font-sans)}
+  #search-input::placeholder{color:var(--ink-faint)}
+  #clear-search{background:none;border:none;color:var(--ink-faint);cursor:pointer;padding:0;display:none}
+  #filter-bar{display:flex;gap:6px;overflow-x:auto;padding:8px 16px;border-bottom:1px solid var(--page-border);flex-shrink:0;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #filter-bar::-webkit-scrollbar{display:none}
+  .filter-chip{flex-shrink:0;padding:5px 12px;border-radius:20px;font-size:13px;border:1px solid var(--page-border);background:var(--page);color:var(--ink-light);cursor:pointer;white-space:nowrap;transition:all .15s;font-family:var(--font-sans)}
+  .filter-chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  #stats-bar{display:flex;gap:16px;padding:6px 16px;border-bottom:1px solid var(--page-border);flex-shrink:0;background:var(--page-warm);font-size:12px;color:var(--ink-faint);align-items:center;justify-content:space-between}
+  #sort-bar{display:flex;gap:8px;padding:6px 16px;flex-shrink:0;border-bottom:1px solid var(--page-border);align-items:center}
+  #sort-bar label{font-size:12px;color:var(--ink-faint)}
+  #sort-select{font-size:13px;background:var(--page-warm);border:1px solid var(--page-border);border-radius:6px;padding:4px 8px;color:var(--ink);font-family:var(--font-sans);flex:1;outline:none}
+  #delete-filtered-btn{font-size:12px;color:var(--accent);background:none;border:1px solid var(--accent);border-radius:6px;padding:4px 10px;cursor:pointer;white-space:nowrap}
+  #main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+  #book-list{padding:8px 0}
+  .book-item{display:flex;align-items:flex-start;gap:12px;padding:12px 16px;border-bottom:1px solid var(--page-border);cursor:pointer;transition:background .1s;position:relative}
+  .book-item:active{background:var(--page-warm)}
+  .book-thumb{width:44px;height:60px;border-radius:4px;flex-shrink:0;background:var(--page-warm);border:1px solid var(--page-border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--ink-faint)}
+  .book-thumb img{width:100%;height:100%;object-fit:cover}
+  .book-info{flex:1;min-width:0}
+  .book-title{font-family:var(--font-serif);font-size:15px;color:var(--ink);margin-bottom:2px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .book-author{font-size:13px;color:var(--ink-light);margin-bottom:4px}
+  .book-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .tag{font-size:11px;padding:2px 7px;border-radius:10px;background:var(--page-warm);color:var(--ink-faint);border:1px solid var(--page-border);white-space:nowrap}
+  .tag.shelf{background:var(--gold-light);color:var(--gold);border-color:var(--gold)}
+  .tag.read{background:var(--green-light);color:var(--green);border-color:var(--green)}
+  .tag.wishlist{background:var(--blue-light);color:var(--blue);border-color:var(--blue)}
+  .tag.loaned{background:var(--accent-faint);color:var(--accent);border-color:var(--accent)}
+  .book-rating{font-size:12px;color:var(--gold)}
+  #empty-state{display:none;flex-direction:column;align-items:center;justify-content:center;padding:60px 32px;gap:12px;text-align:center}
+  #empty-state svg{color:var(--ink-faint);opacity:.4}
+  #empty-state h3{font-family:var(--font-serif);font-size:20px;color:var(--ink-light);font-weight:normal}
+  #empty-state p{font-size:14px;color:var(--ink-faint)}
+  #loading-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 32px;gap:12px;text-align:center}
+  #loading-state p{font-size:14px;color:var(--ink-faint)}
+  #bottom-nav{display:flex;background:var(--page);border-top:1px solid var(--page-border);padding-bottom:var(--safe-bottom);flex-shrink:0}
+  .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;background:none;border:none;cursor:pointer;color:var(--ink-faint);font-size:10px;font-family:var(--font-sans);transition:color .15s}
+  .nav-btn.active{color:var(--accent)}
+  .nav-btn svg{width:22px;height:22px}
+  .panel{position:fixed;inset:0;background:var(--page);z-index:100;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+  .panel.open{transform:translateX(0)}
+  .panel-header{display:flex;align-items:center;gap:12px;padding:calc(var(--safe-top) + 12px) 16px 12px;border-bottom:1px solid var(--page-border);flex-shrink:0;background:var(--page)}
+  .panel-header h2{font-family:var(--font-serif);font-size:20px;font-weight:normal;flex:1}
+  .back-btn{background:none;border:none;cursor:pointer;color:var(--accent);font-size:15px;display:flex;align-items:center;gap:4px;font-family:var(--font-sans)}
+  .panel-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px}
+  .detail-cover{width:100px;height:140px;border-radius:6px;margin:0 auto 16px;background:var(--page-warm);border:1px solid var(--page-border);overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:40px;cursor:pointer;position:relative}
+  .detail-cover img{width:100%;height:100%;object-fit:cover}
+  .detail-cover-label{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.5);color:#fff;font-size:10px;text-align:center;padding:3px}
+  .detail-title{font-family:var(--font-serif);font-size:22px;text-align:center;margin-bottom:4px;line-height:1.3}
+  .detail-author{font-size:15px;color:var(--ink-light);text-align:center;margin-bottom:16px}
+  .detail-tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-bottom:20px}
+  .detail-section{margin-bottom:20px}
+  .detail-section h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint);margin-bottom:8px;border-bottom:1px solid var(--page-border);padding-bottom:4px}
+  .detail-field{margin-bottom:12px}
+  .detail-field label{font-size:12px;color:var(--ink-faint);display:block;margin-bottom:4px}
+  .detail-field input,.detail-field textarea,.detail-field select{width:100%;padding:10px 12px;border:1px solid var(--page-border);border-radius:8px;font-size:15px;font-family:var(--font-sans);background:var(--page-warm);color:var(--ink);outline:none;transition:border-color .15s}
+  .detail-field input:focus,.detail-field textarea:focus,.detail-field select:focus{border-color:var(--accent)}
+  .detail-field textarea{resize:vertical;min-height:80px}
+  .rating-input{display:flex;gap:4px;flex-wrap:wrap}
+  .rating-star{font-size:22px;cursor:pointer;color:var(--page-border);transition:color .1s;user-select:none}
+  .rating-star.on{color:var(--gold)}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:4px 0}
+  .toggle-row label{font-size:15px;color:var(--ink)}
+  .toggle{width:48px;height:28px;background:var(--page-border);border-radius:14px;position:relative;cursor:pointer;transition:background .2s;border:none;flex-shrink:0}
+  .toggle.on{background:var(--green)}
+  .toggle::after{content:'';position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:11px;background:#fff;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+  .toggle.on::after{transform:translateX(20px)}
+  .link-item{display:flex;align-items:center;gap:8px;padding:8px;background:var(--page-warm);border-radius:8px;border:1px solid var(--page-border);margin-bottom:8px}
+  .link-item a{flex:1;font-size:14px;color:var(--blue);text-decoration:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .link-item .link-label{font-size:12px;color:var(--ink-faint)}
+  .link-del{background:none;border:none;color:var(--ink-faint);cursor:pointer;font-size:18px;padding:0 4px}
+  .add-link-form{display:flex;flex-direction:column;gap:8px}
+  .add-link-form input{width:100%;padding:8px 12px;border:1px solid var(--page-border);border-radius:8px;font-size:14px;font-family:var(--font-sans);background:var(--page-warm);color:var(--ink);outline:none}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;border-radius:10px;font-size:15px;font-family:var(--font-sans);cursor:pointer;border:none;transition:all .15s;font-weight:500}
+  .btn-primary{background:var(--accent);color:#fff;width:100%}
+  .btn-primary:active{background:var(--accent-light)}
+  .btn-secondary{background:var(--page-warm);color:var(--ink);border:1px solid var(--page-border)}
+  .btn-danger{background:none;color:#c0392b;border:1px solid #c0392b;width:100%}
+  .btn-sm{padding:7px 14px;font-size:13px}
+  .btn-row{display:flex;gap:10px;margin-top:8px}
+  .btn-row .btn{flex:1}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end}
+  .modal-overlay.open{display:flex}
+  .modal{background:var(--page);border-radius:16px 16px 0 0;width:100%;max-height:85vh;overflow-y:auto;padding:20px 16px calc(var(--safe-bottom) + 20px)}
+  .modal h3{font-family:var(--font-serif);font-size:18px;font-weight:normal;margin-bottom:16px}
+  .modal-handle{width:36px;height:4px;background:var(--page-border);border-radius:2px;margin:0 auto 16px}
+  .settings-section{margin-bottom:24px}
+  .settings-section h3{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint);margin-bottom:12px}
+  .settings-item{display:flex;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid var(--page-border)}
+  .settings-item:last-child{border-bottom:none}
+  .settings-item-icon{width:36px;height:36px;border-radius:8px;background:var(--accent-faint);display:flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0}
+  .settings-item-text{flex:1}
+  .settings-item-text strong{display:block;font-size:15px;font-weight:500}
+  .settings-item-text span{font-size:12px;color:var(--ink-faint)}
+  .settings-item-action{color:var(--accent);font-size:14px;cursor:pointer;background:none;border:none;font-family:var(--font-sans)}
+  #toast{position:fixed;bottom:calc(var(--safe-bottom) + 70px);left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--page);padding:10px 20px;border-radius:20px;font-size:14px;opacity:0;transition:all .3s;z-index:300;white-space:nowrap;pointer-events:none}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .add-form{display:flex;flex-direction:column;gap:14px}
+  #fab{position:fixed;right:20px;bottom:calc(var(--safe-bottom) + 70px);width:52px;height:52px;border-radius:26px;background:var(--accent);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(123,63,30,.4);z-index:50;font-size:26px;transition:transform .15s,box-shadow .15s}
+  #fab:active{transform:scale(.94)}
+  .genre-grid{display:flex;flex-wrap:wrap;gap:8px}
+  .genre-btn{padding:6px 14px;border-radius:16px;font-size:13px;border:1px solid var(--page-border);background:var(--page);color:var(--ink-light);cursor:pointer}
+  .genre-btn.active{background:var(--accent);border-color:var(--accent);color:#fff}
+  #main::-webkit-scrollbar{width:3px}
+  #main::-webkit-scrollbar-thumb{background:var(--page-border);border-radius:2px}
+  .mt-8{margin-top:8px}.mt-16{margin-top:16px}
+  input[type="file"]{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="header">
+    <div id="header-top">
+      <div id="app-title">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <rect x="4" y="3" width="14" height="22" rx="2" fill="var(--accent)" opacity="0.15"/>
+          <rect x="4" y="3" width="14" height="22" rx="2" stroke="var(--accent)" stroke-width="1.5"/>
+          <rect x="10" y="3" width="14" height="22" rx="2" fill="var(--page)" stroke="var(--accent)" stroke-width="1.5"/>
+          <line x1="13" y1="9" x2="21" y2="9" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="13" y1="13" x2="21" y2="13" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round"/>
+          <line x1="13" y1="17" x2="18" y2="17" stroke="var(--accent)" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        Books
+      </div>
+      <div id="header-actions">
+        <button class="icon-btn" onclick="openFilterModal()">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M3 5h14M6 10h8M9 15h2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" onclick="openPanel('settings-panel')">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M10 2v2M10 16v2M2 10h2M16 10h2M4.22 4.22l1.42 1.42M14.36 14.36l1.42 1.42M4.22 15.78l1.42-1.42M14.36 5.64l1.42-1.42" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </div>
+    <div id="search-bar">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/><path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <input id="search-input" type="search" placeholder="Search title, author, genre…" oninput="onSearch()" autocomplete="off" autocorrect="off" spellcheck="false">
+      <button id="clear-search" onclick="clearSearch()">✕</button>
+    </div>
+  </div>
+  <div id="filter-bar">
+    <button class="filter-chip active" onclick="setStatusFilter('all',this)">All</button>
+    <button class="filter-chip" onclick="setStatusFilter('Library',this)">📚 Library</button>
+    <button class="filter-chip" onclick="setStatusFilter('Wishlist',this)">⭐ Wishlist</button>
+    <button class="filter-chip" onclick="setStatusFilter('read',this)">✓ Read</button>
+    <button class="filter-chip" onclick="setStatusFilter('unread',this)">○ Unread</button>
+    <button class="filter-chip" onclick="setStatusFilter('Loaned Out',this)">↗ Loaned</button>
+    <button class="filter-chip" onclick="setStatusFilter('rated',this)">★ Rated</button>
+  </div>
+  <div id="stats-bar">
+    <span id="result-count">Loading…</span>
+    <span id="read-count"></span>
+  </div>
+  <div id="sort-bar">
+    <label>Sort:</label>
+    <select id="sort-select" onchange="renderList()">
+      <option value="no">Record #</option>
+      <option value="title">Title A–Z</option>
+      <option value="author">Author A–Z</option>
+      <option value="genre">Genre</option>
+      <option value="shelf">Shelf</option>
+      <option value="rating">Rating</option>
+    </select>
+    <button id="delete-filtered-btn" onclick="deleteFiltered()">Delete filtered</button>
+  </div>
+  <div id="main">
+    <div id="book-list"></div>
+    <div id="loading-state"><p>Loading your library…</p></div>
+    <div id="empty-state">
+      <svg width="60" height="60" viewBox="0 0 60 60" fill="none"><rect x="10" y="8" width="26" height="44" rx="3" stroke="currentColor" stroke-width="2"/><rect x="20" y="8" width="26" height="44" rx="3" stroke="currentColor" stroke-width="2"/></svg>
+      <h3>No books found</h3><p>Try a different search or filter</p>
+    </div>
+  </div>
+  <div id="bottom-nav">
+    <button class="nav-btn active" id="nav-library" onclick="switchTab('library')">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="5" height="16" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="10" y="4" width="5" height="16" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="17" y="4" width="4" height="16" rx="1" stroke="currentColor" stroke-width="1.6"/></svg>
+      Library
+    </button>
+    <button class="nav-btn" id="nav-wishlist" onclick="switchTab('wishlist')">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" stroke="currentColor" stroke-width="1.6"/></svg>
+      Wishlist
+    </button>
+    <button class="nav-btn" id="nav-stats" onclick="switchTab('stats')">
+      <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="12" width="4" height="9" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="10" y="7" width="4" height="14" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="17" y="3" width="4" height="18" rx="1" stroke="currentColor" stroke-width="1.6"/></svg>
+      Insights
+    </button>
+  </div>
+</div>
+<button id="fab" onclick="openAddBook()">+</button>
+<div id="toast"></div>
+
+<!-- DETAIL PANEL -->
+<div class="panel" id="detail-panel">
+  <div class="panel-header">
+    <button class="back-btn" onclick="closePanel('detail-panel')">‹ Back</button>
+    <h2 id="detail-panel-title">Book</h2>
+    <button class="icon-btn" onclick="deleteCurrentBook()">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12M8 8v6M10 8v6M6 5l1-2h4l1 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="5" width="10" height="11" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+    </button>
+  </div>
+  <div class="panel-body" id="detail-body"></div>
+</div>
+
+<!-- ADD PANEL -->
+<div class="panel" id="add-panel">
+  <div class="panel-header">
+    <button class="back-btn" onclick="closePanel('add-panel')">Cancel</button>
+    <h2>Add Book</h2>
+    <button class="btn btn-sm btn-primary" style="width:auto" onclick="saveNewBook()">Save</button>
+  </div>
+  <div class="panel-body">
+    <div class="add-form">
+      <div class="detail-field"><label>Title *</label><input id="add-title" type="text" placeholder="Book title"></div>
+      <div class="detail-field"><label>Author</label><input id="add-author" type="text" placeholder="Author name"></div>
+      <div class="detail-field"><label>Genre</label><input id="add-genre" type="text" placeholder="e.g. Fiction/Classic"></div>
+      <div class="detail-field"><label>Shelf</label><input id="add-shelf" type="text" placeholder="e.g. 1, 2a, 15"></div>
+      <div class="detail-field"><label>Status</label>
+        <select id="add-status">
+          <option value="Library">Library</option>
+          <option value="Wishlist">Wishlist</option>
+          <option value="Loaned Out">Loaned Out</option>
+          <option value="Archive">Archive</option>
+        </select>
+      </div>
+      <div class="detail-field"><label>Wishlist Notes</label><textarea id="add-wishlist-notes" placeholder="Why you want this book…"></textarea></div>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS PANEL -->
+<div class="panel" id="settings-panel">
+  <div class="panel-header">
+    <button class="back-btn" onclick="closePanel('settings-panel')">‹ Back</button>
+    <h2>Settings</h2>
+  </div>
+  <div class="panel-body">
+    <div class="settings-section">
+      <h3>Import</h3>
+      <div class="settings-item">
+        <div class="settings-item-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 3v10M5 9l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div class="settings-item-text"><strong>Import CSV</strong><span>Add books from a CSV file</span></div>
+        <button class="settings-item-action" onclick="document.getElementById('csv-import-input').click()">Import</button>
+        <input type="file" id="csv-import-input" accept=".csv" onchange="importCSV(this)">
+      </div>
+      <div class="settings-item">
+        <div class="settings-item-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 15V5M5 9l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 15h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div class="settings-item-text"><strong>Export CSV</strong><span>Save all data (excluding photos)</span></div>
+        <button class="settings-item-action" onclick="exportCSV()">Export</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>Data</h3>
+      <div class="settings-item">
+        <div class="settings-item-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="6" stroke="var(--accent)" stroke-width="1.5"/><path d="M9 6v4M9 13v.5" stroke="var(--accent)" stroke-width="1.5" stroke-linecap="round"/></svg></div>
+        <div class="settings-item-text"><strong>Library stats</strong><span id="settings-stats-text">Loading…</span></div>
+      </div>
+      <div class="settings-item">
+        <div class="settings-item-icon" style="background:#fdecea"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12M8 8v6M10 8v6M6 5l1-2h4l1 2" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="5" width="10" height="11" rx="1" stroke="#c0392b" stroke-width="1.5"/></svg></div>
+        <div class="settings-item-text"><strong>Wipe all data</strong><span>Remove all books (keeps photos)</span></div>
+        <button class="settings-item-action" style="color:#c0392b" onclick="confirmWipe()">Wipe</button>
+      </div>
+      <div class="settings-item">
+        <div class="settings-item-icon" style="background:#fdecea"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 5h12M8 8v6M10 8v6M6 5l1-2h4l1 2" stroke="#c0392b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="4" y="5" width="10" height="11" rx="1" stroke="#c0392b" stroke-width="1.5"/></svg></div>
+        <div class="settings-item-text"><strong>Wipe all photos</strong><span>Remove all stored photos</span></div>
+        <button class="settings-item-action" style="color:#c0392b" onclick="confirmWipePhotos()">Wipe</button>
+      </div>
+    </div>
+    <div class="settings-section">
+      <h3>CSV Format Reference</h3>
+      <div style="background:var(--page-warm);border:1px solid var(--page-border);border-radius:8px;padding:12px;font-size:12px;font-family:monospace;color:var(--ink-light);line-height:1.8;overflow-x:auto">
+        No, Title, Author, Genre, Shelf, Status, Rating, Review, WishlistNotes, Links, PhotoFile, Read
+      </div>
+      <p class="mt-8" style="font-size:12px;color:var(--ink-faint)">Links format: Label|URL|Label|URL</p>
+      <p class="mt-8" style="font-size:12px;color:var(--ink-faint)">Status: Library / Wishlist / Loaned Out / Archive</p>
+      <p class="mt-8" style="font-size:12px;color:var(--ink-faint)">Read: Yes / No</p>
+    </div>
+  </div>
+</div>
+
+<!-- STATS PANEL -->
+<div class="panel" id="stats-panel">
+  <div class="panel-header">
+    <button class="back-btn" onclick="closePanel('stats-panel');switchTab('library')">‹ Back</button>
+    <h2>Insights</h2>
+  </div>
+  <div class="panel-body" id="stats-body"></div>
+</div>
+
+<!-- WISHLIST PANEL -->
+<div class="panel" id="wishlist-panel">
+  <div class="panel-header">
+    <button class="back-btn" onclick="closePanel('wishlist-panel');switchTab('library')">‹ Back</button>
+    <h2>Wishlist</h2>
+  </div>
+  <div class="panel-body"><div id="wishlist-list"></div></div>
+</div>
+
+<!-- FILTER MODAL -->
+<div class="modal-overlay" id="filter-modal" onclick="if(event.target===this)closeFilterModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3>Filter by Genre</h3>
+    <div class="genre-grid" id="genre-grid"></div>
+    <div class="mt-16"><button class="btn btn-secondary btn-sm" onclick="clearGenreFilter();closeFilterModal()">Clear genre filter</button></div>
+  </div>
+</div>
+
+<!-- CONFIRM MODAL -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h3 id="confirm-title">Are you sure?</h3>
+    <p id="confirm-msg" style="font-size:14px;color:var(--ink-light);margin-bottom:20px"></p>
+    <div class="btn-row">
+      <button class="btn btn-secondary" onclick="closeConfirm()">Cancel</button>
+      <button class="btn btn-danger" id="confirm-ok">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY='books_data_v1';
+const PHOTOS_KEY='books_photos_v1';
+let books=[];
+let photos={};
+let currentBookId=null;
+let activeStatusFilter='all';
+let activeGenreFilter=null;
+let searchQuery='';
+
+async function init(){
+  const stored=localStorage.getItem(STORAGE_KEY);
+  const storedPhotos=localStorage.getItem(PHOTOS_KEY);
+  if(storedPhotos) photos=JSON.parse(storedPhotos);
+  if(stored){
+    books=JSON.parse(stored);
+    document.getElementById('loading-state').style.display='none';
+    renderList();
+  } else {
+    try{
+      const r=await fetch('books.json');
+      const seed=await r.json();
+      books=seed.map(b=>({...b,status:'Library',rating:0,review:'',wishlistNotes:'',links:[],photoFile:'',read:false}));
+      saveData();
+    } catch(e){
+      books=[];
+      showToast('Could not load book data');
+    }
+    document.getElementById('loading-state').style.display='none';
+    renderList();
+  }
+  updateSettingsStats();
+}
+
+function saveData(){localStorage.setItem(STORAGE_KEY,JSON.stringify(books))}
+function savePhotos(){localStorage.setItem(PHOTOS_KEY,JSON.stringify(photos))}
+function nextNo(){return books.length?Math.max(...books.map(b=>b.no))+1:1}
+
+function getFiltered(){
+  let r=[...books];
+  if(activeStatusFilter==='Wishlist') r=r.filter(b=>b.status==='Wishlist');
+  else if(activeStatusFilter==='Library') r=r.filter(b=>b.status==='Library');
+  else if(activeStatusFilter==='Loaned Out') r=r.filter(b=>b.status==='Loaned Out');
+  else if(activeStatusFilter==='read') r=r.filter(b=>b.read);
+  else if(activeStatusFilter==='unread') r=r.filter(b=>!b.read&&b.status==='Library');
+  else if(activeStatusFilter==='rated') r=r.filter(b=>b.rating>0);
+  if(activeGenreFilter) r=r.filter(b=>b.genre===activeGenreFilter);
+  if(searchQuery){const q=searchQuery.toLowerCase();r=r.filter(b=>(b.title||'').toLowerCase().includes(q)||(b.author||'').toLowerCase().includes(q)||(b.genre||'').toLowerCase().includes(q)||String(b.shelf||'').toLowerCase().includes(q)||String(b.no||'').includes(q))}
+  const s=document.getElementById('sort-select').value;
+  r.sort((a,b)=>{
+    if(s==='title') return(a.title||'').localeCompare(b.title||'');
+    if(s==='author') return(a.author||'').localeCompare(b.author||'');
+    if(s==='genre') return(a.genre||'').localeCompare(b.genre||'');
+    if(s==='shelf') return String(a.shelf||'').localeCompare(String(b.shelf||''));
+    if(s==='rating') return(b.rating||0)-(a.rating||0);
+    return(a.no||0)-(b.no||0);
+  });
+  return r;
+}
+
+function renderList(){
+  const filtered=getFiltered();
+  const list=document.getElementById('book-list');
+  const empty=document.getElementById('empty-state');
+  document.getElementById('result-count').textContent=`${filtered.length} book${filtered.length!==1?'s':''}`;
+  const totalRead=books.filter(b=>b.read).length;
+  document.getElementById('read-count').textContent=totalRead>0?`${totalRead} read`:'';
+  if(!filtered.length){list.innerHTML='';list.style.display='none';empty.style.display='flex';return}
+  list.style.display='block';empty.style.display='none';
+  list.innerHTML=filtered.map(b=>{
+    const photo=photos[b.no];
+    const thumb=photo?`<img src="${photo}" alt="">`:'📖';
+    const statusTag=b.status==='Wishlist'?'<span class="tag wishlist">Wishlist</span>':b.status==='Loaned Out'?'<span class="tag loaned">Loaned</span>':'';
+    const readTag=b.read?'<span class="tag read">Read</span>':'';
+    const shelfTag=`<span class="tag shelf">#${b.no}${b.shelf?' · '+b.shelf:''}</span>`;
+    const stars=b.rating>0?`<div class="book-rating">${'★'.repeat(b.rating)}${'☆'.repeat(10-b.rating)}</div>`:'';
+    return`<div class="book-item" onclick="openBook(${b.no})"><div class="book-thumb">${thumb}</div><div class="book-info"><div class="book-title">${esc(b.title)}</div><div class="book-author">${esc(b.author)}</div><div class="book-meta">${shelfTag}${b.genre?`<span class="tag">${esc(b.genre)}</span>`:''}${statusTag}${readTag}</div>${stars}</div></div>`;
+  }).join('');
+  updateSettingsStats();
+}
+
+function openBook(no){
+  const b=books.find(x=>x.no===no);if(!b)return;
+  currentBookId=no;
+  document.getElementById('detail-panel-title').textContent=b.title.length>25?b.title.slice(0,25)+'…':b.title;
+  renderDetail(b);openPanel('detail-panel');
+}
+
+function renderDetail(b){
+  const photo=photos[b.no];
+  const links=(b.links||[]);
+  const linksHtml=links.map((l,i)=>`<div class="link-item"><div style="flex:1;min-width:0"><div class="link-label">${esc(l.label)}</div><a href="${esc(l.url)}" target="_blank">${esc(l.url)}</a></div><button class="link-del" onclick="removeLink(${b.no},${i})">✕</button></div>`).join('');
+  document.getElementById('detail-body').innerHTML=`
+    <div class="detail-cover" onclick="attachPhoto(${b.no})">${photo?`<img src="${photo}" alt="">`:'<span style="font-size:40px">📖</span>'}<div class="detail-cover-label">${photo?'Tap to change':'Tap to add photo'}</div></div>
+    <input type="file" id="photo-input-${b.no}" accept="image/*" style="display:none" onchange="handlePhoto(event,${b.no})">
+    <div class="detail-title">${esc(b.title)}</div>
+    <div class="detail-author">${esc(b.author)}</div>
+    <div class="detail-tags"><span class="tag shelf">#${b.no} · Shelf ${b.shelf}</span>${b.genre?`<span class="tag">${esc(b.genre)}</span>`:''}${b.status==='Wishlist'?'<span class="tag wishlist">Wishlist</span>':''}${b.status==='Loaned Out'?'<span class="tag loaned">Loaned Out</span>':''}</div>
+    <div class="detail-section"><h3>Details</h3>
+      <div class="detail-field"><label>Title</label><input value="${esc(b.title)}" onchange="updateField(${b.no},'title',this.value)"></div>
+      <div class="detail-field"><label>Author</label><input value="${esc(b.author)}" onchange="updateField(${b.no},'author',this.value)"></div>
+      <div class="detail-field"><label>Genre</label><input value="${esc(b.genre)}" onchange="updateField(${b.no},'genre',this.value)"></div>
+      <div class="detail-field"><label>Shelf</label><input value="${esc(String(b.shelf||''))}" onchange="updateField(${b.no},'shelf',this.value)"></div>
+      <div class="detail-field"><label>Status</label><select onchange="updateField(${b.no},'status',this.value)"><option ${b.status==='Library'?'selected':''}>Library</option><option ${b.status==='Wishlist'?'selected':''}>Wishlist</option><option ${b.status==='Loaned Out'?'selected':''}>Loaned Out</option><option ${b.status==='Archive'?'selected':''}>Archive</option></select></div>
+      <div class="toggle-row"><label>Read</label><button class="toggle ${b.read?'on':''}" onclick="toggleRead(${b.no},this)"></button></div>
+    </div>
+    <div class="detail-section"><h3>Rating</h3>
+      <div class="rating-input" id="stars-${b.no}">${[1,2,3,4,5,6,7,8,9,10].map(i=>`<span class="rating-star ${i<=(b.rating||0)?'on':''}" onclick="setRating(${b.no},${i})">${i<=(b.rating||0)?'★':'☆'}</span>`).join('')}</div>
+    </div>
+    <div class="detail-section"><h3>My Review</h3>
+      <div class="detail-field"><textarea placeholder="Your thoughts…" onchange="updateField(${b.no},'review',this.value)">${esc(b.review||'')}</textarea></div>
+    </div>
+    ${b.status==='Wishlist'?`<div class="detail-section"><h3>Wishlist Notes</h3><div class="detail-field"><textarea placeholder="Why you want this…" onchange="updateField(${b.no},'wishlistNotes',this.value)">${esc(b.wishlistNotes||'')}</textarea></div></div>`:''}
+    <div class="detail-section"><h3>Links</h3>
+      <div id="links-${b.no}">${linksHtml}</div>
+      <div class="add-link-form mt-8">
+        <input id="link-label-${b.no}" placeholder="Label (e.g. Guardian Review)" type="text">
+        <input id="link-url-${b.no}" placeholder="https://…" type="url">
+        <button class="btn btn-secondary btn-sm" onclick="addLink(${b.no})">+ Add link</button>
+      </div>
+    </div>
+    <div class="detail-section"><h3>Actions</h3>
+      ${b.status==='Wishlist'?`<button class="btn btn-secondary" style="width:100%;margin-bottom:8px" onclick="moveToLibrary(${b.no})">Move to Library</button>`:''}
+      ${photo?`<button class="btn btn-secondary" style="width:100%;margin-bottom:8px;color:var(--accent)" onclick="removePhoto(${b.no})">Remove photo</button>`:''}
+    </div>`;
+}
+
+function updateField(no,field,value){const b=books.find(x=>x.no===no);if(!b)return;b[field]=value;saveData();renderList()}
+function toggleRead(no,btn){const b=books.find(x=>x.no===no);if(!b)return;b.read=!b.read;btn.classList.toggle('on',b.read);saveData();renderList()}
+function setRating(no,rating){const b=books.find(x=>x.no===no);if(!b)return;b.rating=rating;saveData();renderList();const c=document.getElementById(`stars-${no}`);if(c)c.querySelectorAll('.rating-star').forEach((s,i)=>{s.classList.toggle('on',i<rating);s.textContent=i<rating?'★':'☆'})}
+function addLink(no){const label=document.getElementById(`link-label-${no}`).value.trim();const url=document.getElementById(`link-url-${no}`).value.trim();if(!url){showToast('Please enter a URL');return}const b=books.find(x=>x.no===no);if(!b)return;if(!b.links)b.links=[];b.links.push({label:label||url,url});saveData();document.getElementById(`link-label-${no}`).value='';document.getElementById(`link-url-${no}`).value='';renderDetail(b);showToast('Link added')}
+function removeLink(no,idx){const b=books.find(x=>x.no===no);if(!b)return;b.links.splice(idx,1);saveData();renderDetail(b)}
+function moveToLibrary(no){const b=books.find(x=>x.no===no);if(!b)return;b.status='Library';saveData();renderDetail(b);renderList();showToast('Moved to Library')}
+
+function attachPhoto(no){document.getElementById(`photo-input-${no}`).click()}
+function handlePhoto(event,no){
+  const file=event.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{const img=new Image();img.onload=()=>{const canvas=document.createElement('canvas');const MAX=400;let w=img.width,h=img.height;if(w>h){if(w>MAX){h=h*MAX/w;w=MAX}}else{if(h>MAX){w=w*MAX/h;h=MAX}}canvas.width=w;canvas.height=h;canvas.getContext('2d').drawImage(img,0,0,w,h);photos[no]=canvas.toDataURL('image/jpeg',.7);savePhotos();const b=books.find(x=>x.no===no);if(b)renderDetail(b);renderList();showToast('Photo saved')};img.src=e.target.result};reader.readAsDataURL(file);
+}
+function removePhoto(no){delete photos[no];savePhotos();const b=books.find(x=>x.no===no);if(b)renderDetail(b);renderList();showToast('Photo removed')}
+
+function deleteCurrentBook(){if(!currentBookId)return;const b=books.find(x=>x.no===currentBookId);showConfirm(`Delete "${b.title}"?`,'This cannot be undone.',()=>{books=books.filter(x=>x.no!==currentBookId);delete photos[currentBookId];saveData();savePhotos();closePanel('detail-panel');renderList();showToast('Book deleted')})}
+function deleteFiltered(){const f=getFiltered();if(!f.length){showToast('Nothing to delete');return}showConfirm(`Delete ${f.length} books?`,'Deletes all books matching current filter. Cannot be undone.',()=>{const nos=new Set(f.map(b=>b.no));books=books.filter(b=>!nos.has(b.no));nos.forEach(no=>delete photos[no]);saveData();savePhotos();renderList();showToast(`${nos.size} books deleted`)})}
+
+function openAddBook(){['add-title','add-author','add-genre','add-shelf','add-wishlist-notes'].forEach(id=>document.getElementById(id).value='');document.getElementById('add-status').value='Library';openPanel('add-panel')}
+function saveNewBook(){const title=document.getElementById('add-title').value.trim();if(!title){showToast('Please enter a title');return}books.push({no:nextNo(),title,author:document.getElementById('add-author').value.trim()||'—',genre:document.getElementById('add-genre').value.trim(),shelf:document.getElementById('add-shelf').value.trim(),status:document.getElementById('add-status').value,rating:0,review:'',wishlistNotes:document.getElementById('add-wishlist-notes').value.trim(),links:[],photoFile:'',read:false});saveData();closePanel('add-panel');renderList();showToast('Book added')}
+
+function onSearch(){searchQuery=document.getElementById('search-input').value;document.getElementById('clear-search').style.display=searchQuery?'block':'none';renderList()}
+function clearSearch(){document.getElementById('search-input').value='';searchQuery='';document.getElementById('clear-search').style.display='none';renderList()}
+function setStatusFilter(val,el){activeStatusFilter=val;document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderList()}
+function openFilterModal(){const genres=[...new Set(books.map(b=>b.genre).filter(Boolean))].sort();document.getElementById('genre-grid').innerHTML=genres.map(g=>`<button class="genre-btn ${activeGenreFilter===g?'active':''}" onclick="setGenreFilter('${g.replace(/'/g,"\\'")}',this)">${esc(g)}</button>`).join('');document.getElementById('filter-modal').classList.add('open')}
+function closeFilterModal(){document.getElementById('filter-modal').classList.remove('open')}
+function setGenreFilter(genre,el){activeGenreFilter=genre;document.querySelectorAll('.genre-btn').forEach(b=>b.classList.remove('active'));el.classList.add('active');renderList();closeFilterModal()}
+function clearGenreFilter(){activeGenreFilter=null;renderList()}
+
+function switchTab(tab){
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById(`nav-${tab}`).classList.add('active');
+  if(tab==='wishlist'){renderWishlist();openPanel('wishlist-panel')}
+  else if(tab==='stats'){renderStats();openPanel('stats-panel')}
+}
+
+function renderWishlist(){
+  const w=books.filter(b=>b.status==='Wishlist');
+  document.getElementById('wishlist-list').innerHTML=!w.length?'<div style="padding:40px;text-align:center;color:var(--ink-faint)"><div style="font-size:40px;margin-bottom:12px">⭐</div><h3 style="font-family:var(--font-serif);font-weight:normal;color:var(--ink-light)">No wishlist books yet</h3></div>':w.map(b=>{const photo=photos[b.no];return`<div class="book-item" onclick="openBook(${b.no})"><div class="book-thumb">${photo?`<img src="${photo}" alt="">`:'⭐'}</div><div class="book-info"><div class="book-title">${esc(b.title)}</div><div class="book-author">${esc(b.author)}</div><div class="book-meta"><span class="tag wishlist">Wishlist</span>${b.genre?`<span class="tag">${esc(b.genre)}</span>`:''}</div>${b.wishlistNotes?`<div style="font-size:12px;color:var(--ink-faint);margin-top:4px">${esc(b.wishlistNotes.slice(0,80))}${b.wishlistNotes.length>80?'…':''}</div>`:''}</div></div>`}).join('')
+}
+
+function renderStats(){
+  const total=books.length,library=books.filter(b=>b.status==='Library').length,wishlist=books.filter(b=>b.status==='Wishlist').length,read=books.filter(b=>b.read).length,loaned=books.filter(b=>b.status==='Loaned Out').length;
+  const rated=books.filter(b=>b.rating>0);const avgRating=rated.length?(rated.reduce((s,b)=>s+b.rating,0)/rated.length).toFixed(1):'—';
+  const gc={};books.forEach(b=>{if(b.genre)gc[b.genre]=(gc[b.genre]||0)+1});
+  const topG=Object.entries(gc).sort((a,b)=>b[1]-a[1]).slice(0,10);const maxG=topG[0]?.[1]||1;
+  const ac={};books.forEach(b=>{if(b.author&&b.author!=='—')ac[b.author]=(ac[b.author]||0)+1});
+  const topA=Object.entries(ac).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  document.getElementById('stats-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px">
+      ${sc('Total Books',total,'📚')}${sc('Read',read,'✓')}${sc('Wishlist',wishlist,'⭐')}${sc('Loaned Out',loaned,'↗')}${sc('Rated',rated.length,'★')}${sc('Avg Rating',avgRating,'☆')}
+    </div>
+    <div class="detail-section"><h3>Top Genres</h3>${topG.map(([g,c])=>`<div style="margin-bottom:8px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px"><span>${esc(g)}</span><span style="color:var(--ink-faint)">${c}</span></div><div style="height:6px;background:var(--page-border);border-radius:3px"><div style="height:6px;background:var(--accent);border-radius:3px;width:${Math.round(c/maxG*100)}%"></div></div></div>`).join('')}</div>
+    <div class="detail-section"><h3>Top Authors</h3>${topA.map(([a,c])=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--page-border);font-size:14px"><span>${esc(a)}</span><span style="color:var(--ink-faint)">${c} books</span></div>`).join('')}</div>`;
+}
+function sc(label,value,icon){return`<div style="background:var(--page-warm);border:1px solid var(--page-border);border-radius:12px;padding:16px;text-align:center"><div style="font-size:24px;margin-bottom:4px">${icon}</div><div style="font-family:var(--font-serif);font-size:28px;color:var(--accent)">${value}</div><div style="font-size:12px;color:var(--ink-faint);margin-top:2px">${label}</div></div>`}
+
+function importCSV(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const lines=e.target.result.split('\n').map(l=>l.trim()).filter(Boolean);if(!lines.length){showToast('Empty file');return}
+    const header=parseCSVLine(lines[0]).map(h=>h.trim().toLowerCase());
+    let imported=0,skipped=0;const existingNos=new Set(books.map(b=>b.no));
+    for(let i=1;i<lines.length;i++){
+      const vals=parseCSVLine(lines[i]);const row={};header.forEach((h,idx)=>row[h]=(vals[idx]||'').trim());
+      const no=parseInt(row['no']||row['#']||row['number'])||null;
+      if(no&&existingNos.has(no)){skipped++;continue}
+      const book={no:no||nextNo(),title:row['title']||'(untitled)',author:row['author']||'—',genre:row['genre']||'',shelf:row['shelf']||'',status:row['status']||'Library',rating:parseInt(row['rating'])||0,review:row['review']||'',wishlistNotes:row['wishlistnotes']||'',links:parseLinks(row['links']||''),photoFile:row['photofile']||'',read:(row['read']||'').toLowerCase()==='yes'};
+      books.push(book);existingNos.add(book.no);imported++;
+    }
+    saveData();renderList();showToast(`Imported ${imported} books${skipped?' ('+skipped+' duplicates skipped)':''}`);input.value='';
+  };reader.readAsText(file);
+}
+function parseLinks(str){if(!str)return[];const parts=str.split('|');const r=[];for(let i=0;i<parts.length;i+=2)if(parts[i])r.push({label:parts[i],url:parts[i+1]||parts[i]});return r}
+function parseCSVLine(line){const r=[];let cur='',inQ=false;for(let i=0;i<line.length;i++){const c=line[i];if(c==='"'&&!inQ){inQ=true;continue}if(c==='"'&&inQ){if(line[i+1]==='"'){cur+='"';i++}else inQ=false;continue}if(c===','&&!inQ){r.push(cur);cur='';continue}cur+=c}r.push(cur);return r}
+function exportCSV(){
+  const header='No,Title,Author,Genre,Shelf,Status,Rating,Review,WishlistNotes,Links,PhotoFile,Read';
+  const rows=books.map(b=>{const links=(b.links||[]).map(l=>`${l.label}|${l.url}`).join('|');return[b.no,csvVal(b.title),csvVal(b.author),csvVal(b.genre),csvVal(String(b.shelf||'')),csvVal(b.status||'Library'),b.rating||0,csvVal(b.review||''),csvVal(b.wishlistNotes||''),csvVal(links),csvVal(b.photoFile||''),b.read?'Yes':'No'].join(',')});
+  const csv=[header,...rows].join('\n');const blob=new Blob([csv],{type:'text/csv'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`books_export_${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);showToast('CSV exported');
+}
+function csvVal(v){if(v===null||v===undefined)return'';const s=String(v);if(s.includes(',')||s.includes('"')||s.includes('\n'))return`"${s.replace(/"/g,'""')}"`;return s}
+
+function confirmWipe(){showConfirm('Wipe all book data?','All books deleted. Photos kept. Cannot be undone.',()=>{books=[];saveData();renderList();closePanel('settings-panel');showToast('All data wiped')})}
+function confirmWipePhotos(){showConfirm('Wipe all photos?','All photos deleted. Book data kept.',()=>{photos={};savePhotos();renderList();showToast('All photos wiped')})}
+function updateSettingsStats(){const el=document.getElementById('settings-stats-text');if(el)el.textContent=`${books.length} books · ${books.filter(b=>b.read).length} read · ${Object.keys(photos).length} photos`}
+
+function openPanel(id){document.getElementById(id).classList.add('open')}
+function closePanel(id){document.getElementById(id).classList.remove('open');if(id==='detail-panel')currentBookId=null;if(id==='wishlist-panel'||id==='stats-panel'){document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('nav-library').classList.add('active')}}
+function showConfirm(title,msg,onOk){document.getElementById('confirm-title').textContent=title;document.getElementById('confirm-msg').textContent=msg;document.getElementById('confirm-ok').onclick=()=>{closeConfirm();onOk()};document.getElementById('confirm-modal').classList.add('open')}
+function closeConfirm(){document.getElementById('confirm-modal').classList.remove('open')}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+
+init();
+</script>
+</body>
+</html>
