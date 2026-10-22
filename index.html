@@ -253,6 +253,7 @@
         <option value="rating">Rating ↓</option>
         <option value="dateread">Date Read ↓</option>
         <option value="customref">Custom Ref</option>
+        <option value="sequence">Sequence</option>
       </select>
       <span style="font-size:11px;color:var(--ink-faint)">then</span>
       <select class="sort-select" id="sort2" onchange="renderList()">
@@ -264,6 +265,7 @@
         <option value="rating">Rating</option>
         <option value="dateread">Date Read</option>
         <option value="customref">Custom Ref</option>
+        <option value="sequence">Sequence</option>
         <option value="no">Record #</option>
       </select>
       <select class="sort-select" id="sort3" onchange="renderList()">
@@ -275,10 +277,12 @@
         <option value="rating">Rating</option>
         <option value="dateread">Date Read</option>
         <option value="customref">Custom Ref</option>
+        <option value="sequence">Sequence</option>
         <option value="no">Record #</option>
       </select>
     </div>
     <button id="bulk-btn" onclick="toggleBulkMode()">Select</button>
+    <button id="stamp-btn" onclick="stampSequence()" title="Number the current filtered+sorted books into the Sequence field">⑆ Stamp seq</button>
     <button id="del-filtered-btn" onclick="deleteFiltered()">Delete filtered</button>
   </div>
 
@@ -425,7 +429,7 @@
     <div class="settings-section">
       <h3>CSV Format Reference</h3>
       <div style="background:var(--page-warm);border:1px solid var(--page-border);border-radius:8px;padding:12px;font-size:11px;font-family:monospace;color:var(--ink-light);line-height:1.8;word-break:break-all">
-        No, Title, Author, Genre, Shelf, CustomRef, Status, Rating, Review, Notes, WishlistNotes, Links, PhotoFile, Read, DateRead
+        No, Title, Author, Genre, Shelf, CustomRef, Sequence, Status, Rating, Review, Notes, WishlistNotes, Links, PhotoFile, Read, DateRead
       </div>
       <p class="mt-8" style="font-size:12px;color:var(--ink-faint)">Links: Label|URL|Label|URL (pipe-separated)</p>
       <p style="font-size:12px;color:var(--ink-faint)">Status: Library / Wishlist / Loaned Out / Archive</p>
@@ -551,7 +555,7 @@ async function init(){
   if(v1){
     try{
       const old=JSON.parse(v1);
-      books=old.map(b=>Object.assign({customRef:'',notes:'',dateRead:''},b));
+      books=old.map(b=>({...b,customRef:b.customRef||'',notes:b.notes||'',dateRead:b.dateRead||'',sequence:b.sequence||''}));
       saveData();
     }catch(e){books=[]}
     document.getElementById('loading-state').style.display='none';
@@ -564,7 +568,7 @@ async function init(){
   try{
     const r=await fetch('books.json');
     const seed=await r.json();
-    books=seed.map(b=>Object.assign({status:'Library',rating:0,review:'',notes:'',wishlistNotes:'',customRef:'',links:[],photoFile:'',read:false,dateRead:''},b));
+    books=seed.map(b=>Object.assign({status:'Library',rating:0,review:'',notes:'',wishlistNotes:'',customRef:'',sequence:'',links:[],photoFile:'',read:false,dateRead:''},b));
     saveData();
   }catch(e){books=[];showToast('Could not load books.json')}
   document.getElementById('loading-state').style.display='none';
@@ -618,6 +622,12 @@ function cmpField(a,b,field){
     if(!da&&!db)return 0;if(!da)return 1;if(!db)return -1;
     return db.localeCompare(da); // newest first
   }
+  if(field==='sequence'){
+    // sort alphanumerically: empty last
+    const sa=a.sequence||'',sb=b.sequence||'';
+    if(!sa&&!sb)return 0;if(!sa)return 1;if(!sb)return -1;
+    return sa.localeCompare(sb,undefined,{numeric:true,sensitivity:'base'});
+  }
   if(field==='shelf'){
     const pa=String(a.shelf||'').match(/^(\d+)(.*)/);
     const pb=String(b.shelf||'').match(/^(\d+)(.*)/);
@@ -625,6 +635,30 @@ function cmpField(a,b,field){
     return String(a.shelf||'').localeCompare(String(b.shelf||''));
   }
   return String(a[field]||'').toLowerCase().localeCompare(String(b[field]||'').toLowerCase());
+}
+
+// ═══════════════════════════════════════════════════════ STAMP SEQUENCE
+function stampSequence(){
+  const filtered=getFiltered();
+  if(!filtered.length){showToast('No books to stamp');return}
+  const unstamped=filtered.filter(b=>!b.sequence);
+  const alreadyDone=filtered.length-unstamped.length;
+  const infoLine=alreadyDone?`(${alreadyDone} already stamped will be skipped)\n`:'';
+  const prefix=prompt(`Prefix for sequence numbers?\n(e.g. FIC- → FIC-001, FIC-002…)\nLeave blank for plain numbers.\n${infoLine}`);
+  if(prefix===null)return;
+  const p=prefix.trim();
+  if(!unstamped.length){showToast('All visible books already have a sequence');return}
+  const startStr=prompt(`Start numbering from?\n(Default 1 — change if resuming, e.g. 48)`,'1');
+  if(startStr===null)return;
+  const startNum=parseInt(startStr)||1;
+  const total=startNum+unstamped.length-1;
+  const pad=total>=100?3:total>=10?2:1;
+  unstamped.forEach((b,i)=>{
+    const num=String(startNum+i).padStart(pad,'0');
+    b.sequence=p?`${p}${num}`:num;
+  });
+  saveData();renderList();
+  showToast(`Stamped ${unstamped.length} books${p?' with prefix '+p:''}${alreadyDone?' ('+alreadyDone+' skipped)':''}`);
 }
 
 // ═══════════════════════════════════════════════════════ RENDER LIST
@@ -647,10 +681,11 @@ function renderList(){
     const readTag=b.read?`<span class="tag read">✓${b.dateRead?' '+b.dateRead.slice(0,4):''}</span>`:'';
     const shelfTag=`<span class="tag shelf">#${b.no}${b.shelf?' · Shelf '+b.shelf:''}</span>`;
     const refTag=b.customRef?`<span class="tag">${esc(b.customRef)}</span>`:'';
+    const seqTag=b.sequence?`<span class="tag" style="background:var(--blue-light);color:var(--blue);border-color:var(--blue)">${esc(b.sequence)}</span>`:'';
     const dupTag=dupSet.has(b.no)?'<span class="tag dup">⚠ Dup</span>':'';
     const stars=b.rating?`<div class="book-rating">${'★'.repeat(b.rating)}</div>`:'';
     const isChecked=selectedNos.has(b.no);
-    return`<div class="book-item${dupSet.has(b.no)?' dup-flag':''}${isChecked?' bulk-selected':''}" onclick="handleItemClick(${b.no},event)"><div class="book-check${isChecked?' checked':''}">${isChecked?'✓':''}</div><div class="book-thumb">${thumb}</div><div class="book-info"><div class="book-title">${esc(b.title)}</div><div class="book-author">${esc(b.author)}</div><div class="book-meta">${shelfTag}${refTag}${b.genre?`<span class="tag">${esc(b.genre)}</span>`:''}${statusTag}${readTag}${dupTag}</div>${stars}</div></div>`;
+    return`<div class="book-item${dupSet.has(b.no)?' dup-flag':''}${isChecked?' bulk-selected':''}" onclick="handleItemClick(${b.no},event)"><div class="book-check${isChecked?' checked':''}">${isChecked?'✓':''}</div><div class="book-thumb">${thumb}</div><div class="book-info"><div class="book-title">${esc(b.title)}</div><div class="book-author">${esc(b.author)}</div><div class="book-meta">${shelfTag}${seqTag}${refTag}${b.genre?`<span class="tag">${esc(b.genre)}</span>`:''}${statusTag}${readTag}${dupTag}</div>${stars}</div></div>`;
   }).join('');
   if(bulkMode)list.classList.add('bulk-mode');
   updateBulkCount();updateSettingsStats();
@@ -693,6 +728,7 @@ ${dupWarn}
   <div class="detail-field"><label>Genre</label><input value="${esc(b.genre||'')}" onchange="updateField(${b.no},'genre',this.value)"></div>
   <div class="detail-field"><label>Shelf</label><input value="${esc(String(b.shelf||''))}" onchange="updateField(${b.no},'shelf',this.value)"></div>
   <div class="detail-field"><label>Custom Ref</label><input value="${esc(b.customRef||'')}" placeholder="e.g. FIC-AUS-01" onchange="updateField(${b.no},'customRef',this.value)"></div>
+  <div class="detail-field"><label>Sequence</label><input value="${esc(b.sequence||'')}" placeholder="e.g. FIC-047 (stamped or manual)" onchange="updateField(${b.no},'sequence',this.value)"></div>
   <div class="detail-field"><label>Status</label>
     <select onchange="updateField(${b.no},'status',this.value)">
       <option${b.status==='Library'?' selected':''}>Library</option>
@@ -1016,6 +1052,7 @@ function importCSV(input){
         genre:row['genre']||'',
         shelf:row['shelf']||'',
         customRef:row['customref']||row['custom ref']||row['custom_ref']||'',
+        sequence:row['sequence']||'',
         status:row['status']||'Library',
         rating:parseInt(row['rating'])||0,
         review:row['review']||'',
@@ -1053,10 +1090,10 @@ function parseCSVLine(line){
 }
 
 function exportCSV(){
-  const header='No,Title,Author,Genre,Shelf,CustomRef,Status,Rating,Review,Notes,WishlistNotes,Links,PhotoFile,Read,DateRead';
+  const header='No,Title,Author,Genre,Shelf,CustomRef,Sequence,Status,Rating,Review,Notes,WishlistNotes,Links,PhotoFile,Read,DateRead';
   const rows=books.map(b=>{
     const links=(b.links||[]).map(l=>`${l.label}|${l.url}`).join('|');
-    return[b.no,cv(b.title),cv(b.author),cv(b.genre),cv(String(b.shelf||'')),cv(b.customRef||''),cv(b.status||'Library'),b.rating||0,cv(b.review||''),cv(b.notes||''),cv(b.wishlistNotes||''),cv(links),cv(b.photoFile||''),b.read?'Yes':'No',cv(b.dateRead||'')].join(',');
+    return[b.no,cv(b.title),cv(b.author),cv(b.genre),cv(String(b.shelf||'')),cv(b.customRef||''),cv(b.sequence||''),cv(b.status||'Library'),b.rating||0,cv(b.review||''),cv(b.notes||''),cv(b.wishlistNotes||''),cv(links),cv(b.photoFile||''),b.read?'Yes':'No',cv(b.dateRead||'')].join(',');
   });
   const csv=[header,...rows].join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
